@@ -1,0 +1,64 @@
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, user-scalable=no" />
+<script id="2d-vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 a_position;
+  attribute vec4 a_colour;
+
+  uniform vec2 u_resolution;
+  
+  varying lowp vec4 v_colour;
+
+  void main() {
+     // convert the rectangle from pixels to 0.0 to 1.0
+     vec2 zeroToOne = a_position / u_resolution;
+
+     // convert from 0->1 to 0->2
+     vec2 zeroToTwo = zeroToOne * 2.0;
+
+     // convert from 0->2 to -1->+1 (clipspace)
+     vec2 clipSpace = zeroToTwo - 1.0;
+
+     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+     
+     v_colour = a_colour;
+  }
+</script>
+<script id="2d-fragment-shader" type="x-shader/x-fragment">  
+  precision mediump float;
+
+  varying lowp vec4 v_colour;
+
+  void main() {
+     gl_FragColor = v_colour;
+  }
+</script>  
+<style type="text/css">
+  body {
+    margin: 0;
+    font-family: 'Futura-Medium', 'Futura', sans-serif;
+    font-size: 60px;
+    -webkit-font-smoothing: antialiased;
+    color: orange;
+  }
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .content {
+    position: absolute;
+    bottom: 0px;
+    left: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="content">hello.</div>
+
+<script src="dist/main.js"></script>
+
+<script src="//localhost:35729/livereload.js"></script>
+
+</body>
+</html>
