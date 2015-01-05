@@ -1,25 +1,27 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-require('./game');
-},{"./game":2}],2:[function(require,module,exports){
-var utils  = require('./utils');
-var render = require('./render');
-var sound = require('./sound');
-var root = window;
-
-/** 
- * Snake game with particle effects
- */ 
-
-var constants = {
+module.exports = {
   FRICTION: 0.9,
   MAX_PARTICLES: 100,
   LEFT: 1,
   UP: 2,
   RIGHT: 4,
   DOWN: 8,
-  GRID_SIZE: 8,
+  GRID_SIZE: 14,
   SPEED: 3
 };
+},{}],2:[function(require,module,exports){
+require('./game');
+},{"./game":3}],3:[function(require,module,exports){
+var utils  = require('./utils'),
+    config = require('./config'),
+    render = require('./render'),
+    sound = require('./sound'),
+    root = window
+    ;
+    
+/** 
+ * Snake game with particle effects
+ */ 
 
 var notes = ['c', 'd', 'e', 'f', 'g', 'a', 'b'];
 
@@ -102,8 +104,8 @@ var Particle = {
     var tempx = this.x,
         tempy = this.y;
         
-    this.x += ( constants.FRICTION * this.x ) - ( constants.FRICTION * this.ox ) + this.ax;
-    this.y += ( constants.FRICTION * this.y ) - ( constants.FRICTION * this.oy ) + this.ay;
+    this.x += ( config.FRICTION * this.x ) - ( config.FRICTION * this.ox ) + this.ax;
+    this.y += ( config.FRICTION * this.y ) - ( config.FRICTION * this.oy ) + this.ay;
 
     this.ox = tempx;
     this.oy = tempy;  
@@ -155,8 +157,8 @@ var req = utils.requestAnimationFrame,
 var Cell = {    
   x: 0,
   y: 0,
-  w: constants.GRID_SIZE,
-  h: constants.GRID_SIZE
+  w: config.GRID_SIZE,
+  h: config.GRID_SIZE
 };
 
 function createCell() {
@@ -198,7 +200,7 @@ var Game = {
   
   createParticles: function () {
     
-    var i = constants.MAX_PARTICLES, particle;
+    var i = config.MAX_PARTICLES, particle;
     
     while(i--) {
       
@@ -348,7 +350,7 @@ var Game = {
 
   updateParticles: function () {
     
-    var i = constants.MAX_PARTICLES;
+    var i = config.MAX_PARTICLES;
     
     while(i--) {      
       this.particles[i].update();            
@@ -357,7 +359,7 @@ var Game = {
   
   constrainParticles: function () {
     
-    var i = constants.MAX_PARTICLES;
+    var i = config.MAX_PARTICLES;
     
     while(i--) {      
       this.particles[i].constrain( {
@@ -500,26 +502,26 @@ var Game = {
   },
   
   moveLeft: function () {
-    if ( !(direction & constants.LEFT) && !(lastDirection & constants.RIGHT) ) {
-      direction += constants.LEFT;            
+    if ( !(direction & config.LEFT) && !(lastDirection & config.RIGHT) ) {
+      direction += config.LEFT;            
     }
   },
   
   moveRight: function () {
-    if ( !(direction & constants.RIGHT) && !(lastDirection & constants.LEFT) ) {
-      direction += constants.RIGHT;            
+    if ( !(direction & config.RIGHT) && !(lastDirection & config.LEFT) ) {
+      direction += config.RIGHT;            
     }
   },
   
   moveUp: function () {
-    if ( !(direction & constants.UP) && !(lastDirection & constants.DOWN) ) {
-      direction += constants.UP;            
+    if ( !(direction & config.UP) && !(lastDirection & config.DOWN) ) {
+      direction += config.UP;            
     }
   },
   
   moveDown: function () {
-    if ( !(direction & constants.DOWN) && !(lastDirection & constants.UP) ) {
-      direction += constants.DOWN;      
+    if ( !(direction & config.DOWN) && !(lastDirection & config.UP) ) {
+      direction += config.DOWN;      
     } 
   },
   
@@ -598,23 +600,23 @@ var Game = {
     
     switch(event.keyCode) {
       case 37:       
-        if (direction & constants.LEFT) {
-          direction -= constants.LEFT;            
+        if (direction & config.LEFT) {
+          direction -= config.LEFT;            
         }
         break;
       case 38:    
-        if (direction & constants.UP) {
-          direction -= constants.UP;            
+        if (direction & config.UP) {
+          direction -= config.UP;            
         }
         break
       case 39:             
-        if (direction & constants.RIGHT) {
-          direction -= constants.RIGHT;            
+        if (direction & config.RIGHT) {
+          direction -= config.RIGHT;            
         }
         break;
       case 40:           
-        if (direction & constants.DOWN) {
-          direction -= constants.DOWN;            
+        if (direction & config.DOWN) {
+          direction -= config.DOWN;            
         }
         break;          
     }    
@@ -648,14 +650,14 @@ var Game = {
     return {
       x: x, 
       y: y, 
-      w: constants.GRID_SIZE, 
-      h: constants.GRID_SIZE, 
+      w: config.GRID_SIZE, 
+      h: config.GRID_SIZE, 
       lifespan:lifespan || 150
     };
   },
   getRandomCell: function () {
     
-    var step = constants.GRID_SIZE;
+    var step = config.GRID_SIZE;
     
     return {
       x: round( Math.random() * (gl.canvas.clientWidth-step), step ),
@@ -682,7 +684,7 @@ var Game = {
     
     function checkCell( cell, tail ) {
       
-      var a, b, c, d, step = constants.GRID_SIZE;
+      var a, b, c, d, step = config.GRID_SIZE;
       
       a = ( cell.x === tail.x && cell.y === tail.y );
       b = ( (cell.x + step) === tail.x && cell.y === tail.y );
@@ -708,7 +710,7 @@ var Game = {
     
     var r = Math.random(); 
     
-    var step = constants.GRID_SIZE;
+    var step = config.GRID_SIZE;
     
     if (r < 0.25) {
       this.food.push([
@@ -843,21 +845,21 @@ var Game = {
     
     this.updateFood();
 
-    if ((++this.frame % constants.SPEED) === 0) {      
+    if ((++this.frame % config.SPEED) === 0) {      
       
-      if (direction & constants.LEFT) {
+      if (direction & config.LEFT) {
         accel.x = -1;
         accel.y = 0;
       }
-      if (direction & constants.RIGHT) {
+      if (direction & config.RIGHT) {
         accel.x = 1;
         accel.y = 0;
       }
-      if (direction & constants.UP) {
+      if (direction & config.UP) {
         accel.y = -1;      
         accel.x = 0;    
       }
-      if (direction & constants.DOWN) {
+      if (direction & config.DOWN) {
         accel.y = 1;
         accel.x = 0;
       }
@@ -876,7 +878,7 @@ var Game = {
           
         } else {
           
-          var m = constants.GRID_SIZE;
+          var m = config.GRID_SIZE;
           
           head = temp;
           
@@ -936,8 +938,10 @@ var gl = render.init( function () {
   
 } );
 
-},{"./render":3,"./sound":4,"./utils":5}],3:[function(require,module,exports){
-var glUtils = require('./webgl-utils');
+},{"./config":1,"./render":4,"./sound":5,"./utils":6}],4:[function(require,module,exports){
+var glUtils = require('./webgl-utils'),
+    config  = require('./config')
+    ;
 
 /**
  * Game Renderer 
@@ -1008,8 +1012,8 @@ var render = (function () {
       new Float32Array([
         // left column
           0,   0,  0,
-         8,   0,  0,
-          0, 8,  0]),
+         config.GRID_SIZE,   0,  0,
+          0, config.GRID_SIZE,  0]),
       gl.STATIC_DRAW);
       
     flipBuffer = gl.createBuffer();
@@ -1020,9 +1024,9 @@ var render = (function () {
       gl.ARRAY_BUFFER,
       new Float32Array([
         // left column
-        0,   8,  0,
-        8,   0,  0,
-        8,  8,  0]),
+        0,   config.GRID_SIZE,  0,
+        config.GRID_SIZE,   0,  0,
+        config.GRID_SIZE,  config.GRID_SIZE,  0]),
       gl.STATIC_DRAW);
       
     // Create square buffer
@@ -1032,11 +1036,11 @@ var render = (function () {
       gl.ARRAY_BUFFER,
       new Float32Array([
         0, 0, 0,
-        8, 0, 0,
-        0, 8, 0,
-        0, 8, 0,
-        8, 0, 0,
-        8, 8, 0
+        config.GRID_SIZE, 0, 0,
+        0, config.GRID_SIZE, 0,
+        0, config.GRID_SIZE, 0,
+        config.GRID_SIZE, 0, 0,
+        config.GRID_SIZE, config.GRID_SIZE, 0
       ]),
       gl.STATIC_DRAW
     );
@@ -1295,7 +1299,7 @@ var render = (function () {
 })();
 
 module.exports = render;
-},{"./webgl-utils":6}],4:[function(require,module,exports){
+},{"./config":1,"./webgl-utils":7}],5:[function(require,module,exports){
 /**
  * Generated sound manager 
  */
@@ -1474,7 +1478,7 @@ var SoundManager = (function () {
 module.exports = SoundManager;
  
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 module.exports = (function () {
   
   "use strict";
@@ -1508,7 +1512,7 @@ module.exports = (function () {
 })();
   
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * WebGL Utility methods 
  */
@@ -1605,4 +1609,4 @@ var glUtils = (function () {
 // WebGL context 
 module.exports = glUtils;
 
-},{}]},{},[1])
+},{}]},{},[2])

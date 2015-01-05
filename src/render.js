@@ -1,4 +1,6 @@
-var glUtils = require('./webgl-utils');
+var glUtils = require('./webgl-utils'),
+    config  = require('./config')
+    ;
 
 /**
  * Game Renderer 
@@ -69,8 +71,8 @@ var render = (function () {
       new Float32Array([
         // left column
           0,   0,  0,
-         8,   0,  0,
-          0, 8,  0]),
+         config.GRID_SIZE,   0,  0,
+          0, config.GRID_SIZE,  0]),
       gl.STATIC_DRAW);
       
     flipBuffer = gl.createBuffer();
@@ -81,9 +83,9 @@ var render = (function () {
       gl.ARRAY_BUFFER,
       new Float32Array([
         // left column
-        0,   8,  0,
-        8,   0,  0,
-        8,  8,  0]),
+        0,   config.GRID_SIZE,  0,
+        config.GRID_SIZE,   0,  0,
+        config.GRID_SIZE,  config.GRID_SIZE,  0]),
       gl.STATIC_DRAW);
       
     // Create square buffer
@@ -93,11 +95,11 @@ var render = (function () {
       gl.ARRAY_BUFFER,
       new Float32Array([
         0, 0, 0,
-        8, 0, 0,
-        0, 8, 0,
-        0, 8, 0,
-        8, 0, 0,
-        8, 8, 0
+        config.GRID_SIZE, 0, 0,
+        0, config.GRID_SIZE, 0,
+        0, config.GRID_SIZE, 0,
+        config.GRID_SIZE, 0, 0,
+        config.GRID_SIZE, config.GRID_SIZE, 0
       ]),
       gl.STATIC_DRAW
     );
