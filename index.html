@@ -4,32 +4,6 @@
   
   <script src="lib/webgl-2d-math.js"></script>
   
-  <script id="2d-vertex-shader" type="x-shader/x-vertex">
-    attribute vec4 a_position;
-
-    uniform mat4 u_matrix;
-  
-    varying lowp vec4 v_colour;
-
-    void main() {
-
-       // multiply the position by the matrix 
-       gl_Position = u_matrix * a_position;
-       gl_PointSize = 2.0;
-       
-       v_colour = gl_Position * 0.5 + 0.5;
-       
-    }
-  </script>
-  <script id="2d-fragment-shader" type="x-shader/x-fragment">  
-    precision mediump float;
-
-    varying lowp vec4 v_colour;
-
-    void main() {
-       gl_FragColor = vec4(v_colour.xyz, 0.75);
-    }
-  </script>  
   <style type="text/css">
 
     @font-face {
