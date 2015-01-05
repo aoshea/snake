@@ -1,12 +1,6 @@
-/*jshint browser:true */
-
-(function (root, factory) {
-
+module.exports = (function () {
+  
   "use strict";
-
-  root.utils = factory(root);
-                                            
-})(window, function (window, undefined) {
   
   /* Helper method for preserving scope */
   var proxy = function () {
@@ -34,4 +28,5 @@
     requestAnimationFrame: requestAnimationFrame
   };
   
-});
+})();
+  

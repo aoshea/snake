@@ -17,7 +17,6 @@ gulp.task('default', ['build', 'watch']);
  * @usage `gulp build`
  */
 gulp.task('build', function() {
-  // place code for your default task here
   return gulp.src('src/main.js')
       .pipe(plumber({errorHandler: notify.onError("Error: <%= error.message %>")}))
       .pipe(browserify())

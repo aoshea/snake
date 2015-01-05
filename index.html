@@ -1,64 +1,106 @@
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, user-scalable=no" />
-<script id="2d-vertex-shader" type="x-shader/x-vertex">
-  attribute vec2 a_position;
-  attribute vec4 a_colour;
-
-  uniform vec2 u_resolution;
+  <meta name="viewport" content="user-scalable=no, width=device-width">
   
-  varying lowp vec4 v_colour;
+  <script src="lib/webgl-2d-math.js"></script>
+  
+  <script id="2d-vertex-shader" type="x-shader/x-vertex">
+    attribute vec4 a_position;
 
-  void main() {
-     // convert the rectangle from pixels to 0.0 to 1.0
-     vec2 zeroToOne = a_position / u_resolution;
+    uniform mat4 u_matrix;
+  
+    varying lowp vec4 v_colour;
 
-     // convert from 0->1 to 0->2
-     vec2 zeroToTwo = zeroToOne * 2.0;
+    void main() {
 
-     // convert from 0->2 to -1->+1 (clipspace)
-     vec2 clipSpace = zeroToTwo - 1.0;
+       // multiply the position by the matrix 
+       gl_Position = u_matrix * a_position;
+       gl_PointSize = 2.0;
+       
+       v_colour = gl_Position * 0.5 + 0.5;
+       
+    }
+  </script>
+  <script id="2d-fragment-shader" type="x-shader/x-fragment">  
+    precision mediump float;
 
-     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-     
-     v_colour = a_colour;
-  }
-</script>
-<script id="2d-fragment-shader" type="x-shader/x-fragment">  
-  precision mediump float;
+    varying lowp vec4 v_colour;
 
-  varying lowp vec4 v_colour;
+    void main() {
+       gl_FragColor = vec4(v_colour.xyz, 0.75);
+    }
+  </script>  
+  <style type="text/css">
 
-  void main() {
-     gl_FragColor = v_colour;
-  }
-</script>  
-<style type="text/css">
-  body {
-    margin: 0;
-    font-family: 'Futura-Medium', 'Futura', sans-serif;
-    font-size: 60px;
-    -webkit-font-smoothing: antialiased;
-    color: orange;
-  }
-  canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-  .content {
-    position: absolute;
-    bottom: 0px;
-    left: 10px;
-  }
-</style>
+    @font-face {
+        font-family:"Joystix";
+        src: url("font/joystix.ttf")
+    }
+    
+    html {
+      text-rendering: optimizeLegibility !important;
+      -webkit-font-smoothing: antialiased !important;
+    }
+  
+    body {
+      margin: 0;
+      padding: 0;
+      
+      text-align: center;            
+      background-color: #fff;
+      font-family: 'Joystix', monospace;
+      -webkit-font-smoothing: antialiased;
+      color: purple;      
+    }
+    
+    #canvas {
+      background-color: #fefefe;     
+      margin: 0 auto;
+      border-top: 1px solid #f1f1f1;
+      border-bottom: 1px solid #f1f1f1;
+    }
+    
+    .wrapper {
+      width: 320px;
+    }
+    
+    .ui {
+      text-align: center;
+      font-size: 14px;
+      width: 320px;
+      margin: 0 auto;
+    }
+    
+    .score-container {
+      float: left;
+    }
+    .score-container {
+      color: #03f;
+    }
+    .score-container span {
+      color: #faf;
+    }
+    .hiscore-container {
+      color: red;
+      float: right;
+    }
+    .hiscore-container span {
+      color: #faf;
+    }
+    
+    
+  </style>
 </head>
 <body>
-<div class="content">hello.</div>
+  <div class="wrapper">
+    <div class="ui">
+      <div class="score-container">score<span class="score">000000</span></div>
+      <div class="hiscore-container">hiscore<span class="hiscore">0000000</span></div>
+    </div>
+    <canvas id="canvas" width="320" height="400"></canvas>
+  </div>
 
-<script src="dist/main.js"></script>
-
-<script src="//localhost:35729/livereload.js"></script>
-
+  <script src="dist/main.js"></script>
+  <script src="//localhost:35729/livereload.js"></script>
 </body>
 </html>

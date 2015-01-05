@@ -1,188 +1,358 @@
-/*jshint browser:true, devel:true */
-/*global Float32Array */
-(function (root) {
-  
-  "use strict"; 
-  var document = root.document;
-  
-  root.render = (function () {
-    
-    var gl, 
-        shaderProgram, 
-        canvasWidth, 
-        canvasHeight, 
-        vertices, 
-        lineVertices,
-        colours, 
-        vertexBuffer, 
-        colourBuffer, 
-        vertexPosAttrib, 
-        vertexColourAttrib;
-    
-    function createShader(gl, shaderScript, src) {
-      var shader;
-      if (shaderScript.type === 'x-shader/x-fragment') {
-        shader = gl.createShader(gl.FRAGMENT_SHADER);
-      } else if (shaderScript.type === 'x-shader/x-vertex') {
-        shader = gl.createShader(gl.VERTEX_SHADER);
-      } else {
-        return null;
-      }
-      gl.shaderSource(shader, src);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        alert('Error compiling shaders ' + gl.getShaderInfoLog(shader));
-        return null;
-      }
-      return shader;
-    }
-    
-    function getShader(gl, id) {
-      var shaderScript, src, currentChild;      
-      shaderScript = document.getElementById(id);
-      if (!shaderScript) return null;
-      
-      src = '';
-      currentChild = shaderScript.firstChild;
-      while(currentChild) {
-        if (currentChild.nodeType === currentChild.TEXT_NODE) {
-          src += currentChild.textContent;
-        }
-        currentChild = currentChild.nextSibling;
-      }
-      
-      return createShader(gl, shaderScript, src);
-    }
-    
-    function initShaders(gl, fragmentId, vertexId) {
-      var fragmentShader = getShader(gl, fragmentId),
-          vertexShader   = getShader(gl, vertexId);
-          
-      shaderProgram = gl.createProgram();
-      gl.attachShader(shaderProgram, fragmentShader);
-      gl.attachShader(shaderProgram, vertexShader);
-      gl.linkProgram(shaderProgram);
-      if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-        throw new Error('Unable to initialize shader program');
-      }
-      gl.useProgram(shaderProgram);    
-    }
-    
-    function init() {
+var glUtils = require('./webgl-utils');
 
-      var canvas = document.createElement('canvas');
-      canvas.width = root.innerWidth;
-      canvas.height = root.innerHeight;
+/**
+ * Game Renderer 
+ */
 
-      canvasWidth = canvas.width;
-      canvasHeight = canvas.height;
+var render = (function () {
+  
+  // Constants
+  var MAX_VERTICES = 300;
+  
+  var time = 0;
+  
+  // WebGL context 
+  var gl;
+  
+  // Shader programs
+  var program, flipProgram;
+  
+  // Shaders 
+  var shaders = {
+    vertex: '',
+    fragment: '',
+    reverse_fragment: ''
+  };
+  
+  // Shader properties 
+  var positionLocation, matrixLocation, timeLocation;
+  
+  // Buffers
+  var buffer, flipBuffer, particleBuffer, squareBuffer;
+  
+  // Points
+  var points, numPoints; 
+  
+  // Particle vertices  
+  var vertices;
+  
+  // Explosion data, x,y, random value
+  var explosion, numExplosions;
+  
+  // Matrices
+  var translation, rotation, scale;
+  
+  function setup() {
+    
+    program = glUtils.createProgram( shaders.vertex, shaders.fragment );
+    flipProgram = glUtils.createProgram( shaders.vertex, shaders.reverse_fragment );
+    
+    // setup matrices
+    translation = [100, 0, 0];
+    points = [[0, 0]];
+    numPoints = 1;
+    rotation = [0, 0, 0];
+    scale = [1, 1, 1];
+    
+    timeLocation = gl.getUniformLocation( flipProgram, 'u_time' );
+    // loop up where the vertex data needs to go 
+    positionLocation = gl.getAttribLocation( program, 'a_position' );
+    // look up uniforms 
+    matrixLocation = gl.getUniformLocation( program, 'u_matrix' );
+    
+    buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([
+        // left column
+          0,   0,  0,
+         8,   0,  0,
+          0, 8,  0]),
+      gl.STATIC_DRAW);
       
-      gl = null;
+    flipBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, flipBuffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([
+        // left column
+        0,   8,  0,
+        8,   0,  0,
+        8,  8,  0]),
+      gl.STATIC_DRAW);
+      
+    // Create square buffer
+    squareBuffer = gl.createBuffer();
+    gl.bindBuffer( gl.ARRAY_BUFFER, squareBuffer );
+    gl.bufferData( 
+      gl.ARRAY_BUFFER,
+      new Float32Array([
+        0, 0, 0,
+        8, 0, 0,
+        0, 8, 0,
+        0, 8, 0,
+        8, 0, 0,
+        8, 8, 0
+      ]),
+      gl.STATIC_DRAW
+    );
+      
+    // Create particle buffer 
+    vertices = [];
+    for(var i = 0; i < MAX_VERTICES; ++i) {
+      vertices[i] = 0.0;
+    }
+    vertices = new Float32Array( vertices );
+    
+    particleBuffer = gl.createBuffer();
+    gl.bindBuffer( gl.ARRAY_BUFFER, particleBuffer );
+    gl.bufferData( 
+      gl.ARRAY_BUFFER,
+      vertices,
+      gl.DYNAMIC_DRAW);
+      
+    // blending 
+    gl.enable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
+    gl.blendFunc(gl.SRC_ALPHA, gl.DST_COLOR);
+      
+    drawScene();  
+  }
+    
+  function init( callback ) {
+    
+    gl = glUtils.setupGL( document.getElementById('canvas') ); 
+    
+    glUtils.loadShaders( shaders, function () {
+      setup();
+      callback(); 
+    });
+    
+    return gl;
+  }
   
-      try {
-        gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      } catch (e) {}
+  function drawScene() {    
+    
+    gl.useProgram( program );
+    positionLocation = gl.getAttribLocation( program, 'a_position' );
+    matrixLocation = gl.getUniformLocation( program, 'u_matrix' );
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareBuffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+
+    // Compute the matrices
+    var matrix, projectionMatrix, scaleMatrix;
+    
+    var i, point;
+    
+    projectionMatrix = make2DProjection(gl.canvas.clientWidth, gl.canvas.clientHeight, 400);
+    scaleMatrix = makeScale(scale[0], scale[1], scale[2]);
+    
+    for(i = 0; i < numPoints; ++i) {
+    
+      point = points[i];
+      
+      translationMatrix = makeTranslation(point[0], point[1], 1);
+      rotationXMatrix = makeXRotation(rotation[0]);
+      rotationYMatrix = makeYRotation(rotation[1]);
+      rotationZMatrix = makeZRotation(rotation[2]);
+    
+      matrix = makeIdentity();        
+      
+      matrix = matrixMultiply(scaleMatrix, rotationZMatrix);
+      matrix = matrixMultiply(matrix, rotationYMatrix);
+      matrix = matrixMultiply(matrix, rotationXMatrix);
+      matrix = matrixMultiply(matrix, translationMatrix);
+      matrix = matrixMultiply(matrix, projectionMatrix);
+    
+      // set the matrix 
+      gl.uniformMatrix4fv(matrixLocation, false, matrix);
   
-      if (!gl) {
-        alert('Unable to initialise WebGL');
-        return;
-      }
+      // draw the geometry 
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }    
+    
+    gl.useProgram( flipProgram );
+    positionLocation = gl.getAttribLocation( flipProgram, 'a_position' );
+    matrixLocation = gl.getUniformLocation( flipProgram, 'u_matrix' );
+    timeLocation = gl.getUniformLocation( flipProgram, 'u_time' );
+    
+    gl.uniform1f( timeLocation, performance.now() / 1000 );
+    
+    gl.bindBuffer( gl.ARRAY_BUFFER, squareBuffer );
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);   
+    
+    var expl;
         
-      initShaders(gl, '2d-fragment-shader', '2d-vertex-shader');
-      createBuffer();
-
-      document.body.appendChild(canvas);
-    }
-
-    function setRect(x, y, width, height) {
-      var x1 = x + width, y1 = y + height;
-      vertices.push(x, y, x1, y, x, y1, x, y1, x1, y, x1, y1);
+    for(i = 0; i < numExplosions; ++i) {
       
-      var scale = y / gl.canvas.height;
-
-      colours.push(
-              1.0, 1-scale, scale, 1.0,
-              1.0, 1-scale, scale, 1.0,
-              1.0, 1-scale, scale, 1.0,
-              1.0, 1-scale, scale, 1.0,              
-              1.0, 1-scale, scale, 1.0,
-              1.0, 1-scale, scale, 1.0                      
-      );
-    }
+      expl = explosions[i];    
+            
+      translationMatrix = makeTranslation( expl.translation[0], expl.translation[1], expl.translation[2] );
+      rotationXMatrix = makeXRotation( expl.rotation[0] );
+      rotationYMatrix = makeYRotation( expl.rotation[1] );
+      rotationZMatrix = makeZRotation( expl.rotation[2] );
+      scaleMatrix = makeScale( expl.scale, expl.scale, expl.scale ); 
+      
+      gl.uniform1f( timeLocation, i*0.1);
+      
+      var tempTranslationMatrix = makeTranslation( -4, -4, 0 );
+      var tempInverseTranslationMatrix = makeTranslation( 4, 4,  0);
     
-    function drawRects(rects, colour) {
-      var i = rects.length;
-      while(i--) {
-        drawRect(rects[i].x, rects[i].y, rects[i].w, rects[i].h);
-      }
-    }
+      matrix = makeIdentity();
+      
+      matrix = matrixMultiply(matrix, tempTranslationMatrix);
+      
+      matrix = matrixMultiply(matrix, scaleMatrix);
+      
+      matrix = matrixMultiply(matrix, tempInverseTranslationMatrix);
+            
+      matrix = matrixMultiply( matrix, rotationZMatrix );
+      matrix = matrixMultiply( matrix, rotationYMatrix );
+      matrix = matrixMultiply( matrix, rotationXMatrix );
+      matrix = matrixMultiply( matrix, translationMatrix );
+      matrix = matrixMultiply( matrix, projectionMatrix ); 
     
-    function drawRect(x, y, width, height) {
-      if (!vertices) vertices = [];            
-      setRect(x, y, width, height);
-    }
-    
-    function drawLine(x0, y0, x1, y1) {
-      lineVertices.push(x0, y0, x1, y1);
-    }
-    
-    function clear() {
-      vertices = [];
-      lineVertices = [];
-      colours = [];
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-    
-    function flush() {
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-      gl.vertexAttribPointer(vertexPosAttrib, 2, gl.FLOAT, false, 0, 0);  
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-      
-      gl.bindBuffer(gl.ARRAY_BUFFER, colourBuffer);
-      gl.vertexAttribPointer(vertexColourAttrib, 4, gl.FLOAT, false, 0, 0);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colours), gl.STATIC_DRAW);
-      
-      gl.drawArrays(gl.TRIANGLES, 0, parseInt(vertices.length/2, 10));   
-      
-      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-      gl.vertexAttribPointer(vertexPosAttrib, 2, gl.FLOAT, false, 0, 0);  
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVertices), gl.STATIC_DRAW);
-      
-      gl.bindBuffer(gl.ARRAY_BUFFER, colourBuffer);
-      gl.vertexAttribPointer(vertexColourAttrib, 4, gl.FLOAT, false, 0, 0);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colours), gl.STATIC_DRAW);   
-      
-      gl.drawArrays(gl.LINES, 0, parseInt(lineVertices.length/2, 10));         
-    }
-    
-    function createBuffer() {
-      vertexColourAttrib = gl.getAttribLocation(shaderProgram, "a_colour");
-      gl.enableVertexAttribArray(vertexColourAttrib);
-      
-      vertexPosAttrib = gl.getAttribLocation(shaderProgram, 'a_position');
-      gl.enableVertexAttribArray(vertexPosAttrib);
+      // set the matrix 
+      gl.uniformMatrix4fv(matrixLocation, false, matrix);
   
-      var resolutionLocation = gl.getUniformLocation(shaderProgram, 'u_resolution');
-      gl.uniform2f(resolutionLocation, canvasWidth, canvasHeight);
-  
-      // create buffer
-      vertexBuffer = gl.createBuffer();
-      colourBuffer = gl.createBuffer();
+      // draw the geometry 
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
       
-      gl.enable(gl.BLEND);
-      gl.disable(gl.DEPTH_TEST);
+    scaleMatrix = makeScale( 1, 1, 1 ); 
+    
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, flipBuffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);   
+    
+    for(i = 0; i < numPoints; ++i) {
+    
+      point = points[i];
+        
+      translationMatrix = makeTranslation(point[0], point[1], 1);
+      rotationXMatrix = makeXRotation(rotation[0]);
+      rotationYMatrix = makeYRotation(rotation[1]);
+      rotationZMatrix = makeZRotation(rotation[2]);
+    
+      matrix = makeIdentity();        
+      matrix = matrixMultiply(scaleMatrix, rotationZMatrix);
+      matrix = matrixMultiply(matrix, rotationYMatrix);
+      matrix = matrixMultiply(matrix, rotationXMatrix);
+      matrix = matrixMultiply(matrix, translationMatrix);
+      matrix = matrixMultiply(matrix, projectionMatrix);
+    
+      // set the matrix 
+      gl.uniformMatrix4fv(matrixLocation, false, matrix);
+  
+      // draw the geometry 
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }       
+    
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, particleBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW); 
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+    
+    matrix = makeIdentity();        
+    translationMatrix = makeTranslation(0, 0, 1);
+    matrix = matrixMultiply(scaleMatrix, rotationZMatrix);
+    matrix = matrixMultiply(matrix, rotationYMatrix);
+    matrix = matrixMultiply(matrix, rotationXMatrix);
+    matrix = matrixMultiply(matrix, translationMatrix);
+    matrix = matrixMultiply(matrix, projectionMatrix);
+  
+    // set the matrix 
+    gl.uniformMatrix4fv(matrixLocation, false, matrix);
+    // draw the geometry 
+    gl.lineWidth(4);
+    gl.drawArrays(gl.LINES, 0, 100);
+      
+  }
+  
+  // make a matrix for each explosion 
+  function drawExplosions( data ) {
+    
+    var len = data.length, i, explosion, state, info;
+    
+    explosions = [];
+    numExplosions = 0;
+    
+    for(i = 0; i < len; ++i) {
+            
+      explosion = data[i];
+      state = 1 - (explosion.lifespan / explosion.target);
+      info = {};
+      
+      info.translation = [ explosion.x, explosion.y, 1 ];
+      info.rotation = [ 0, 0, explosion.random + state * explosion.state ];
+      info.scale = state ;//* explosion.random * Math.random() * 5;   
+                  
+      explosions.push( info );
+
+      ++numExplosions;
     }
     
-    return {
-      init: init,
-      clear: clear,
-      flush: flush,
-      drawRect: drawRect,
-      drawRects: drawRects,
-      drawLine: drawLine
-    };    
-  })();
+  }
   
-})(window);
+  function drawRects(rects, colour) {
+    
+    numPoints += rects.length;
+    
+    var i = rects.length;
+    
+    while(i--) {
+      
+      points.push([rects[i].x, rects[i].y]);
+      
+    }
+  }
+  
+  function drawParticles( particles ) {
+    
+    var len = particles.length;
+    
+    var i = 0, index = 0;
+    
+    for(i; i < MAX_VERTICES; i+=6) {
+      
+      var particle = particles[index++ % len];
+      
+      vertices[i]   = particle.x;
+      vertices[i+1] = particle.y;
+      vertices[i+2] = 0;
+      
+      vertices[i+3] = particle.ox;
+      vertices[i+4] = particle.oy;
+      vertices[i+5] = 0;
+    }    
+  }
+  
+  function clear() {
+    // clear the points 
+    numPoints = 0;
+    points = [];
+    
+    // clear the canvas 
+    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  }
+    
+  return {
+    init: init,
+    drawRects: drawRects,
+    drawScene: drawScene,
+    drawParticles: drawParticles,
+    drawExplosions: drawExplosions,
+    clear: clear
+  }
+  
+})();
+
+module.exports = render;
