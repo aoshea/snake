@@ -3,6 +3,20 @@
   "name": "feeder",
   "author": "Alastair O'Shea",
   "homepage": "http://alastairoshea.com",
+  "scripts": {
+    "clean": "rimraf dist",
+    "mkdirs": "mkdir -p dist/glsl && mkdir -p dist/fonts && mkdir -p dist/lib",
+    "html": "cp index.html dist/index.html",
+    "glsl": "cp -r glsl/ dist/glsl/",
+    "font": "cp -r font/ dist/font/",
+    "lib": "cp -r lib/ dist/lib",
+    "build:assets": "npm run html & npm run glsl & npm run font & npm run lib",
+    "build:js": "browserify src/main.js --debug -o dist/bundle.js",
+    "build": "npm run clean && npm run mkdirs && npm run build:assets && npm run build:js",
+    "watch": "watchify src/main.js -o dist/bundle.js -v",
+    "serve": "serve dist",
+    "start": "npm run build && npm run watch & npm run serve"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/aoshea/feeder"
@@ -10,20 +24,15 @@
   "bugs": {
     "url": "https://github.com/aoshea/feeder/issues"
   },
-  "licenses": [
-    {}
-  ],
+  "license": "MIT",
   "engines": {
     "node": ">= 0.10.0"
   },
   "devDependencies": {
-    "browserify": "~4.1.11",
-    "gulp": "^3.8.5",
-    "gulp-browserify": "^0.5.0",
-    "gulp-jshint": "^1.6.3",
-    "gulp-livereload": "^2.1.0",
-    "gulp-notify": "^1.4.0",
-    "gulp-plumber": "^0.6.3"
+    "browserify": "^17.0.0",
+    "rimraf": "^3.0.2",
+    "serve": "^11.3.2",
+    "watchify": "^3.11.1"
   },
   "dependencies": {}
 }
